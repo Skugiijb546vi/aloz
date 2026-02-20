@@ -12,7 +12,7 @@ on:
       referer_url:
         description: 'سەرچاوەی لینکەکە (بۆ تێپەڕاندنی 403 Forbidden)'
         required: true
-        default: 'https://beenama.com/'
+        default: 'https://zedflix.tv/'
 
 jobs:
   upload_job:
