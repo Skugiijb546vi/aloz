@@ -9,6 +9,10 @@ on:
         description: 'ناوی فایلەکە لەناو Hugging Face (بە .mp4 کۆتایی بێت)'
         required: true
         default: 'video.mp4'
+      referer_url:
+        description: 'سەرچاوەی لینکەکە (بۆ تێپەڕاندنی 403 Forbidden)'
+        required: true
+        default: 'https://beenama.com/'
 
 jobs:
   upload_job:
@@ -19,13 +23,17 @@ jobs:
           sudo apt-get update -qq
           # دابەزاندنی ffmpeg زۆر گرنگە بۆ تێکەڵکردنی پارچە ڤیدیۆکانی CDN
           sudo apt-get install -y ffmpeg -qq
-          # دابەزاندنی yt-dlp لەبری aria2 بۆ مامەڵەکردن لەگەڵ لینکی ئاڵۆز
+          # دابەزاندنی yt-dlp
           python -m pip install -U pip yt-dlp huggingface_hub
 
-      - name: ⬇️ Download Video (Handles Tokens & Streams)
+      - name: ⬇️ Download Video (Bypass 403 Forbidden)
         run: |
-          # yt-dlp بە شێوەیەکی ئۆتۆماتیکی لینکەکە شیکار دەکات و ڤیدیۆکە دادەگرێت
-          yt-dlp -o "video.mp4" "${{ github.event.inputs.video_url }}"
+          # بەکارهێنانی User-Agent و Referer بۆ فێڵکردن لە سێرڤەری پاراستن
+          yt-dlp \
+            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
+            --add-header "Referer: ${{ github.event.inputs.referer_url }}" \
+            --add-header "Origin: ${{ github.event.inputs.referer_url }}" \
+            -o "video.mp4" "${{ github.event.inputs.video_url }}"
 
       - name: 🚀 Upload to Hugging Face
         env:
