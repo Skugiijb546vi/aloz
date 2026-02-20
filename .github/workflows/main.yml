@@ -3,14 +3,14 @@ on:
   workflow_dispatch:
     inputs:
       video_url:
-        description: 'لینکی ڤیدیۆکە (بە تۆکنەکەیەوە)'
+        description: 'لینکی ڤیدیۆکە (M3U8)'
         required: true
       file_name:
-        description: 'ناوی فایلەکە لەناو Hugging Face (بە .mp4 کۆتایی بێت)'
+        description: 'ناوی فایلەکە'
         required: true
         default: 'video.mp4'
       referer_url:
-        description: 'سەرچاوەی لینکەکە (بۆ تێپەڕاندنی 403 Forbidden)'
+        description: 'Referer URL'
         required: true
         default: 'https://videostr.net/'
 
@@ -22,20 +22,18 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg -qq
-          # زیادکردنی curl_cffi بۆ تێپەڕاندنی پاراستنی Cloudflare
-          python -m pip install -U pip yt-dlp huggingface_hub curl_cffi
+          python -m pip install -U pip huggingface_hub
 
-      - name: ⬇️ Download Video (Bypass 403 & Cloudflare)
+      - name: ⬇️ Download Video using FFmpeg
         run: |
-          # بەکارهێنانی impersonate بۆ ئەوەی وەک Chrome خۆی نیشان بدات
-          # ئەمە کێشەی 403 و Cloudflare چارەسەر دەکات
-          yt-dlp \
-            --impersonate chrome \
-            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
-            --add-header "Referer: ${{ github.event.inputs.referer_url }}" \
-            --add-header "Origin: ${{ github.event.inputs.referer_url }}" \
-            --concurrent-fragments 5 \
-            -o "video.mp4" "${{ github.event.inputs.video_url }}"
+          # لێرەدا ڕاستەوخۆ FFmpeg بەکاردێنین بۆ داگرتن
+          # ئەم ڕێگەیە زۆرجار پاراستنی 403 دەبڕێت کە yt-dlp ناتوانێ
+          ffmpeg -hide_banner -loglevel error \
+            -headers "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
+            -headers "Referer: ${{ github.event.inputs.referer_url }}" \
+            -headers "Origin: https://videostr.net" \
+            -i "${{ github.event.inputs.video_url }}" \
+            -c copy -bsf:a aac_adtstoasc "video.mp4"
 
       - name: 🚀 Upload to Hugging Face
         env:
@@ -46,10 +44,6 @@ jobs:
           from huggingface_hub import HfApi
           
           token = os.getenv('HF_TOKEN')
-          if not token:
-              print('❌ Error: HF_TOKEN is missing!')
-              exit(1)
-              
           api = HfApi()
           repo_id = 'Sarkoakram/sarko761'
           file_name = '${{ github.event.inputs.file_name }}'
@@ -65,6 +59,6 @@ jobs:
               )
               print('✅ Done!')
           else:
-              print('❌ Error: video.mp4 not found. Download might have failed.')
+              print('❌ Error: Download failed (video.mp4 not found).')
               exit(1)
           "
