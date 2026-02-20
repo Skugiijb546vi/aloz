@@ -1,21 +1,4 @@
-
-https://bee.beena.space/data/file2/6G5dxq9RxQorm4TrI~V9f23Ljmz5teRRusZqP0rkSz~1muRJnWS3LcqaELkq+RfkuCbYF7bXVal4RR7FWuRjsoQmJ97lUBMISPrnVVVgJ6CgMwNhi8zJ4REN5HzyEhAFOffCGvD7DvuLut55sNxoGIse+BgR4nrEND+aWuF3xkc=/MTA4MA==/aW5kZXgubTN1OA==.m3u8 ?headers=%7B%22origin%22%3A%22https%3A%2F%2Fvideostr.net%22%2C%22referer%22%3A%22https%3A%2F%2Fvideostr.net%2F%22%7D&host=https%3A%2F%2Fnightbreeze17.site
-
-ئەم هەڵەیە ئەدات 
-Run # بەکارهێنانی User-Agent و Referer بۆ فێڵکردن لە سێرڤەری پاراستن 
-
-[generic] Extracting URL: https://bee.beena.space/data/file2/6G5dxq9RxQorm4TrI~V9f23Ljmz5teRRusZqP0rkSz~1muRJnWS3LcqaELkq+R...W5kZXgubTN1OA==.m3u8 
-
-[generic] aW5kZXgubTN1OA==: Downloading webpage 
-
-ERROR: [generic] Got HTTP Error 403 caused by Cloudflare anti-bot challenge; see https://github.com/yt-dlp/yt-dlp#impersonation for how to install the required impersonation dependency, and try again with --extractor-args "generic:impersonate" 
-
-Error: Process completed with exit code 1.
-
-
-
-ئەمەش کۆدەکەیە بەڵام شێوازی کارکردنی مەگۆڕە بۆ سایتەکانی تر چونکە لەهەنێک شوێنی تر ڤیدۆی پێی دا ئەرم وابکە ئەم جۆرەش دابەزێنی 
-name: Direct_To_HuggingFace_CDN
+ name: Direct_To_HuggingFace_CDN
 on:
   workflow_dispatch:
     inputs:
