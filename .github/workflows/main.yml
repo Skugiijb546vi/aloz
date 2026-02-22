@@ -1,4 +1,4 @@
- name: Direct_To_HuggingFace_CDN
+name: Direct_To_HuggingFace_CDN
 on:
   workflow_dispatch:
     inputs:
@@ -21,29 +21,26 @@ jobs:
       - name: 🏗️ Setup Tools
         run: |
           sudo apt-get update -qq
-          # دابەزاندنی ffmpeg زۆر گرنگە بۆ تێکەڵکردنی پارچە ڤیدیۆکانی CDN
           sudo apt-get install -y ffmpeg -qq
-          # دابەزاندنی yt-dlp
           python -m pip install -U pip yt-dlp huggingface_hub
 
       - name: ⬇️ Download Video (Bypass 403 Forbidden)
         run: |
-          # بەکارهێنانی User-Agent و Referer بۆ فێڵکردن لە سێرڤەری پاراستن
           yt-dlp \
             --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
-            --add-header "Referer: ${{ github.event.inputs.referer_url }}" \
-            --add-header "Origin: ${{ github.event.inputs.referer_url }}" \
-            -o "video.mp4" "${{ github.event.inputs.video_url }}"
+            --add-header "Referer: ${{ inputs.referer_url }}" \
+            --add-header "Origin: ${{ inputs.referer_url }}" \
+            -o "video.mp4" "${{ inputs.video_url }}"
 
       - name: 🚀 Upload to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          FILE_NAME: ${{ inputs.file_name }}
         run: |
           python3 -c "
           import os
           from huggingface_hub import HfApi
           
-          # وەرگرتنی تۆکن لە سێتیتنگس
           token = os.getenv('HF_TOKEN')
           if not token:
               print('❌ Error: HF_TOKEN is missing in GitHub Secrets!')
@@ -51,7 +48,7 @@ jobs:
               
           api = HfApi()
           repo_id = 'Sarkoakram/sarko761'
-          file_name = '${{ github.event.inputs.file_name }}'
+          file_name = os.getenv('FILE_NAME', 'video.mp4')
           
           print(f'📤 Sending to Hugging Face: {file_name}...')
           
