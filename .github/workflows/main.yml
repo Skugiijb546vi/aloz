@@ -47,7 +47,7 @@ jobs:
               exit(1)
               
           api = HfApi()
-          repo_id = 'Sarkoakram/sarko761'
+          repo_id = 'Sarko761/ai-training-data'
           file_name = os.getenv('FILE_NAME', 'video.mp4')
           
           print(f'📤 Sending to Hugging Face: {file_name}...')
