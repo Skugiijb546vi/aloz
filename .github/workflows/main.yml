@@ -48,12 +48,12 @@ jobs:
               
           api = HfApi()
           repo_id = 'Sarko717227/Ai_SMART'
-          file_name = os.getenv('FILE_NAME', 'video.mp4')
+          file_name = os.getenv('FILE_NAME', 'safetensors')
           
           print(f'📤 Sending to Hugging Face: {file_name}...')
           
           api.upload_file(
-              path_or_fileobj='video.mp4',
+              path_or_fileobj='safetensors',
               path_in_repo=file_name,
               repo_id=repo_id,
               repo_type='dataset',
