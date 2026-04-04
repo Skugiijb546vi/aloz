@@ -6,7 +6,7 @@ on:
         description: 'لینکی ڤیدیۆکە (بە تۆکنەکەیەوە)'
         required: true
       file_name:
-        description: 'ناوی فایلەکە لەناو Hugging Face (بە .mp4 کۆتایی بێت)'
+        description: 'ناوی فایلەکە لەناو Hugging Face'
         required: true
         default: 'safetensors'
       referer_url:
@@ -30,7 +30,7 @@ jobs:
             --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
             --add-header "Referer: ${{ inputs.referer_url }}" \
             --add-header "Origin: ${{ inputs.referer_url }}" \
-            -o "video.mp4" "${{ inputs.video_url }}"
+            -o "safetensors" "${{ inputs.video_url }}"
 
       - name: 🚀 Upload to Hugging Face
         env:
