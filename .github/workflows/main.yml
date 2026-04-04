@@ -8,7 +8,7 @@ on:
       file_name:
         description: 'ناوی فایلەکە لەناو Hugging Face (بە .mp4 کۆتایی بێت)'
         required: true
-        default: 'video.mp4'
+        default: 'safetensors'
       referer_url:
         description: 'سەرچاوەی لینکەکە (بۆ تێپەڕاندنی 403 Forbidden)'
         required: true
