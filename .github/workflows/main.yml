@@ -29,7 +29,15 @@ jobs:
         env:
           COOKIES: ${{ secrets.COOKIES_TXT }}
         run: |
-          echo "$COOKIES" > cookies.txt
+          python3 -c "
+          import os
+          cookies = os.environ.get('COOKIES', '')
+          with open('cookies.txt', 'w', encoding='utf-8') as f:
+              # دڵنیابوونەوە لە بوونی هێدەری فەرمی بۆ ئەوەی yt-dlp قبوڵی بکات
+              if '# Netscape HTTP Cookie File' not in cookies:
+                  f.write('# Netscape HTTP Cookie File\n\n')
+              f.write(cookies)
+          "
 
       - name: ⬇️ Download Video (Bypass 403 Forbidden with Cookies)
         run: |
