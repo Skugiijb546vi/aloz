@@ -1,9 +1,10 @@
 name: Direct_To_HuggingFace_CDN
+
 on:
   workflow_dispatch:
     inputs:
       video_url:
-        description: 'لینکی ڤیدیۆکە (بە تۆکنەکەیەوە)'
+        description: 'لینکی m3u8 ی ڤیدیۆکە (بە تۆکنەکەیەوە)'
         required: true
       file_name:
         description: 'ناوی فایلەکە لەناو Hugging Face'
@@ -12,7 +13,7 @@ on:
       referer_url:
         description: 'سەرچاوەی لینکەکە (بۆ تێپەڕاندنی 403 Forbidden)'
         required: true
-        default: 'https://zedflix.tv/'
+        default: 'https://newlinehd.com/'
 
 jobs:
   upload_job:
@@ -24,12 +25,19 @@ jobs:
           sudo apt-get install -y ffmpeg -qq
           python -m pip install -U pip yt-dlp huggingface_hub
 
-      - name: ⬇️ Download Video (Bypass 403 Forbidden)
+      - name: 🍪 Create Cookies File
+        env:
+          COOKIES: ${{ secrets.COOKIES_TXT }}
+        run: |
+          echo "$COOKIES" > cookies.txt
+
+      - name: ⬇️ Download Video (Bypass 403 Forbidden with Cookies)
         run: |
           yt-dlp \
+            --cookies cookies.txt \
             --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
             --add-header "Referer: ${{ inputs.referer_url }}" \
-            --add-header "Origin: ${{ inputs.referer_url }}" \
+            --add-header "Origin: https://newlinehd.com" \
             -o "safetensors" "${{ inputs.video_url }}"
 
       - name: 🚀 Upload to Hugging Face
@@ -49,6 +57,10 @@ jobs:
           api = HfApi()
           repo_id = 'Sarko717227/Ai_SMART'
           file_name = os.getenv('FILE_NAME', 'safetensors')
+          
+          if not os.path.exists('safetensors') or os.path.getsize('safetensors') == 0:
+              print('❌ Error: Download failed. File is missing or empty. (Likely IP Blocked by CDN)')
+              exit(1)
           
           print(f'📤 Sending to Hugging Face: {file_name}...')
           
