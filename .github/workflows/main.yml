@@ -1,10 +1,10 @@
- name: Direct_To_HuggingFace_CDN
+name: Direct_To_HuggingFace_CDN
 
 on:
   workflow_dispatch:
     inputs:
       video_url:
-        description: 'لینکی m3u8 ی ڤیدیۆکە (بە تۆکنەکەیەوە)'
+        description: 'لینکی Embed ی ڤیدیۆکە لێرە دابنێ (نەک m3u8)'
         required: true
       file_name:
         description: 'ناوی فایلەکە لەناو Hugging Face'
@@ -32,21 +32,37 @@ jobs:
           python3 -c "
           import os
           cookies = os.environ.get('COOKIES', '')
-          with open('cookies.txt', 'w', encoding='utf-8') as f:
-              # دڵنیابوونەوە لە بوونی هێدەری فەرمی بۆ ئەوەی yt-dlp قبوڵی بکات
-              if '# Netscape HTTP Cookie File' not in cookies:
-                  f.write('# Netscape HTTP Cookie File\n\n')
-              f.write(cookies)
+          if cookies:
+              with open('cookies.txt', 'w', encoding='utf-8') as f:
+                  if '# Netscape HTTP Cookie File' not in cookies:
+                      f.write('# Netscape HTTP Cookie File\n\n')
+                  f.write(cookies)
           "
 
-      - name: ⬇️ Download Video (Bypass 403 Forbidden with Cookies)
+      - name: ⬇️ Download Video (Bypass BunnyCDN IP Binding)
         run: |
-          yt-dlp \
-            --cookies cookies.txt \
-            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" \
-            --add-header "Referer: ${{ inputs.referer_url }}" \
+          # لێرەدا ڕاستەوخۆ یارمەتی yt-dlp دەدەین کە وەک براوزەرێک بچێتە ناو پەڕەی سایتەکە
+          # بەم شێوەیە خۆی تۆکنی m3u8 بەپێی ئایپی سێرڤەرەکەی GitHub دەردەهێنێت
+          
+          if [ -f "cookies.txt" ]; then
+            COOKIE_CMD="--cookies cookies.txt"
+          else
+            COOKIE_CMD=""
+          fi
+
+          yt-dlp $COOKIE_CMD \
+            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            --referer "${{ inputs.referer_url }}" \
             --add-header "Origin: https://newlinehd.com" \
-            -o "safetensors" "${{ inputs.video_url }}"
+            --add-header "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
+            --add-header "Accept-Language: en-US,en;q=0.5" \
+            --no-check-certificate \
+            --format "bestvideo+bestaudio/best" \
+            --merge-output-format mp4 \
+            -o "safetensors.mp4" "${{ inputs.video_url }}"
+            
+          # گۆڕینی ناوی فایلەکە بۆ ئەو ناوەی دیاریت کردووە (بەبێ پاشگر یان بە پاشگرەوە)
+          mv "safetensors.mp4" "safetensors"
 
       - name: 🚀 Upload to Hugging Face
         env:
@@ -67,7 +83,7 @@ jobs:
           file_name = os.getenv('FILE_NAME', 'safetensors')
           
           if not os.path.exists('safetensors') or os.path.getsize('safetensors') == 0:
-              print('❌ Error: Download failed. File is missing or empty. (Likely IP Blocked by CDN)')
+              print('❌ Error: Download failed. File is missing or empty. (Likely Blocked by CDN)')
               exit(1)
           
           print(f'📤 Sending to Hugging Face: {file_name}...')
