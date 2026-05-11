@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       video_url:
-        description: 'لینکی Embed ی ڤیدیۆکە لێرە دابنێ (نەک m3u8)'
+        description: 'لینکی Embed ی ڤیدیۆکە لێرە دابنێ (https://player.mediadelivery.net/...)'
         required: true
       file_name:
         description: 'ناوی فایلەکە لەناو Hugging Face'
@@ -23,45 +23,74 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg -qq
-          python -m pip install -U pip yt-dlp huggingface_hub
+          # زیادکردنی مۆدیوڵی requests بۆ پایتۆن
+          python -m pip install -U pip requests yt-dlp huggingface_hub
 
-      - name: 🍪 Create Cookies File
+      - name: 🔍 Extract m3u8 Link Natively (Bypass yt-dlp Extractor)
         env:
-          COOKIES: ${{ secrets.COOKIES_TXT }}
+          EMBED_URL: ${{ inputs.video_url }}
+          REFERER_URL: ${{ inputs.referer_url }}
         run: |
           python3 -c "
-          import os
-          cookies = os.environ.get('COOKIES', '')
-          if cookies:
-              with open('cookies.txt', 'w', encoding='utf-8') as f:
-                  if '# Netscape HTTP Cookie File' not in cookies:
-                      f.write('# Netscape HTTP Cookie File\n\n')
-                  f.write(cookies)
+          import requests, re, os, sys
+          embed_url = os.environ.get('EMBED_URL', '')
+          referer = os.environ.get('REFERER_URL', '')
+          
+          headers = {
+              'Referer': referer,
+              'Origin': 'https://newlinehd.com',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+          }
+          
+          print('Fetching embed page to extract m3u8 directly...')
+          try:
+              r = requests.get(embed_url, headers=headers, timeout=15)
+          except Exception as e:
+              print(f'❌ Connection Error: {e}')
+              sys.exit(1)
+              
+          if r.status_code != 200:
+              print(f'❌ Error: Server returned status code {r.status_code}')
+              sys.exit(1)
+              
+          if 'Video not found' in r.text or '404' in r.text:
+              print('❌ Error: Video not found or Referer blocked by BunnyCDN.')
+              sys.exit(1)
+              
+          # گەڕان بەدوای لینکی m3u8 بە بەکارهێنانی Regex بۆ تێپەڕاندنی ئاڵۆزییەکانی پلەیەرەکە
+          m3u8_match = re.search(r'(https://[^\"\'\s]+\.m3u8[^\"\'\s]*)', r.text)
+          if not m3u8_match:
+              print('❌ Error: Could not find m3u8 link in the HTML. The link might be dead or heavily obfuscated.')
+              sys.exit(1)
+              
+          m3u8_url = m3u8_match.group(1)
+          print(f'✅ Successfully extracted m3u8 URL!')
+          
+          with open('m3u8_link.txt', 'w') as f:
+              f.write(m3u8_url)
           "
 
-      - name: ⬇️ Download Video (Bypass BunnyCDN IP Binding)
+      - name: ⬇️ Download Video Stream
         run: |
-          # لێرەدا ڕاستەوخۆ یارمەتی yt-dlp دەدەین کە وەک براوزەرێک بچێتە ناو پەڕەی سایتەکە
-          # بەم شێوەیە خۆی تۆکنی m3u8 بەپێی ئایپی سێرڤەرەکەی GitHub دەردەهێنێت
-          
-          if [ -f "cookies.txt" ]; then
-            COOKIE_CMD="--cookies cookies.txt"
-          else
-            COOKIE_CMD=""
+          if [ ! -f "m3u8_link.txt" ]; then
+            echo "❌ Error: m3u8 file not found!"
+            exit 1
           fi
-
-          yt-dlp $COOKIE_CMD \
+          
+          M3U8_URL=$(cat m3u8_link.txt)
+          echo "Starting yt-dlp download from the extracted stream..."
+          
+          # لێرەدا ڕاستەوخۆ لینکە دەرهێنراوەکە دەدەین بە yt-dlp
+          yt-dlp \
             --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
             --referer "${{ inputs.referer_url }}" \
             --add-header "Origin: https://newlinehd.com" \
-            --add-header "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
-            --add-header "Accept-Language: en-US,en;q=0.5" \
             --no-check-certificate \
             --format "bestvideo+bestaudio/best" \
             --merge-output-format mp4 \
-            -o "safetensors.mp4" "${{ inputs.video_url }}"
+            -o "safetensors.mp4" "$M3U8_URL"
             
-          # گۆڕینی ناوی فایلەکە بۆ ئەو ناوەی دیاریت کردووە (بەبێ پاشگر یان بە پاشگرەوە)
           mv "safetensors.mp4" "safetensors"
 
       - name: 🚀 Upload to Hugging Face
@@ -83,7 +112,7 @@ jobs:
           file_name = os.getenv('FILE_NAME', 'safetensors')
           
           if not os.path.exists('safetensors') or os.path.getsize('safetensors') == 0:
-              print('❌ Error: Download failed. File is missing or empty. (Likely Blocked by CDN)')
+              print('❌ Error: Download failed. File is missing or empty.')
               exit(1)
           
           print(f'📤 Sending to Hugging Face: {file_name}...')
