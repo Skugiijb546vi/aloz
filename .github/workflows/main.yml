@@ -23,8 +23,9 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg -qq
-          # لێرەدا curl-cffi زیادکراوە بۆ ئەوەی توانای impersonate کار بکات
-          python -m pip install -U pip yt-dlp huggingface_hub curl-cffi
+          # دڵنیابوونەوە لە دامەزراندنی تەواوەتی پێداویستییەکانی yt-dlp و curl-cffi
+          python -m pip install -U pip
+          python -m pip install -U "yt-dlp[default]" curl-cffi huggingface_hub
 
       - name: 🍪 Create Cookies File
         env:
@@ -40,21 +41,19 @@ jobs:
                   f.write(cookies)
           "
 
-      - name: ⬇️ Download Video (Bypass BunnyCDN IP Binding & Cloudflare)
+      - name: ⬇️ Download Video (Bypass BunnyCDN & Cloudflare)
         run: |
-          # لێرەدا ڕاستەوخۆ یارمەتی yt-dlp دەدەین کە وەک براوزەرێک بچێتە ناو پەڕەی سایتەکە
-          # بەم شێوەیە خۆی تۆکنی m3u8 بەپێی ئایپی سێرڤەرەکەی GitHub دەردەهێنێت
-          
           if [ -f "cookies.txt" ]; then
             COOKIE_CMD="--cookies cookies.txt"
           else
             COOKIE_CMD=""
           fi
 
+          # بەکارهێنانی impersonate بە گشتی بەبێ دیاریکردنی ڤێرژنی سەیر
           yt-dlp $COOKIE_CMD \
-            --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            --impersonate chrome \
+            --extractor-args "generic:impersonate" \
             --referer "${{ inputs.referer_url }}" \
-            --extractor-args "generic:impersonate=chrome124" \
             --add-header "Origin: https://newlinehd.com" \
             --add-header "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
             --add-header "Accept-Language: en-US,en;q=0.5" \
@@ -63,7 +62,6 @@ jobs:
             --merge-output-format mp4 \
             -o "safetensors.mp4" "${{ inputs.video_url }}"
             
-          # گۆڕینی ناوی فایلەکە بۆ ئەو ناوەی دیاریت کردووە (بەبێ پاشگر یان بە پاشگرەوە)
           mv "safetensors.mp4" "safetensors"
 
       - name: 🚀 Upload to Hugging Face
